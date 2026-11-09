@@ -1,0 +1,47 @@
+["noreply@r.groupon.com"]
+action = "unsubscribe"
+
+["noreply@info.tacobell.com"]
+action = "unsubscribe"
+
+["shop@randomgolfclub.com"]
+action = "unsubscribe"
+
+["messages-noreply@linkedin.com"]
+action = "unsubscribe"
+
+["team@kickstargo.com"]
+action = "unsubscribe"
+
+["team@trendingkickstarter.com"]
+action = "unsubscribe"
+
+["developer@insideapple.apple.com"]
+action = "unsubscribe"
+
+["dap-c64-hgm@user.dice.com"]
+action = "unsubscribe"
+
+["customerservice@thankyou.citi.com"]
+action = "unsubscribe"
+
+["williamsparkneighbors.gmail.com@ybbsuu.sqspmail.com"]
+action = "keep"
+
+["reservations@res-marriott.com"]
+action = "keep"
+
+["do.not.reply@notify.carsandstays.delta.com"]
+action = "keep"
+
+["uber@uber.com"]
+action = "keep"
+
+["citicards@info6.citi.com"]
+action = "keep"
+
+["alerts@info6.citi.com"]
+action = "keep"
+
+["nobody@protected-test-domain.example.com"]
+action = "keep"

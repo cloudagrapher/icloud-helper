@@ -1,0 +1,132 @@
+# icloud-helper global configuration
+# All action defaults are safe: dry_run=true, allow_delete=false,
+# allow_confirmed_actions=false.
+# Change dry_run=false only after verifying policy.toml is correct.
+# NEVER enable allow_confirmed_actions in production without understanding
+# the full confirmed-action gate (see mcp_server.py).
+
+# Folders to scan. "Junk" surfaces bulk senders but is scan-only.
+folders = ["INBOX", "Junk"]
+
+# Master safety switch. When true, no outbound HTTP or IMAP mutations occur.
+dry_run = false
+
+# Allow permanent deletion. Requires dry_run=false AND explicit disposition="delete".
+allow_delete = true   # armed 2026-06-30 for local Cowork-driven trash (soft-delete to "Deleted Messages", never EXPUNGE)
+
+# Default disposition for unsubscribed senders.
+# Options: "move_to_unsubscribed", "archive", "delete" (delete requires allow_delete=true)
+disposition = "move_to_unsubscribed"
+
+# H2: Exact From-domain protection list.  Matching is on the FQDN extracted
+# from the message From header — no suffix expansion.  So info6.citi.com is
+# protected but thankyou.citi.com is not, and insideapple.apple.com is not.
+# These are Stefan's transactional/alert senders that must never be actioned.
+protected_domains = [
+    "info6.citi.com",   # Citi card statements and alerts (keep)
+]
+
+# H4: Allow the MCP server to create policy allowlist entries autonomously.
+# Keep false so cron/MCP cannot self-authorize new unsubscribe targets.
+allow_mcp_policy_writes = false
+
+# F6: Gate for the new confirmed-action mechanism (move_messages, trash_messages,
+# unsubscribe_message). MUST remain false unless you understand the implications.
+# When true the MCP server emits a WARNING at startup.
+allow_confirmed_actions = true   # armed 2026-06-30 for local Cowork live actions; server logs a WARNING at startup
+
+# B.1: Trust-hint allowlist for one-click POST targets.
+# Hosts on this list skip the pending_review deferred step.
+# Empty list falls back to the hardcoded defaults in icloud_helper/unsubscribe.py.
+# NOTE: the IP denylist (not this list) is the primary SSRF control.
+unsubscribe_allowed_domains = []
+
+# B.1: Hard-block list for one-click POST target hosts.
+# Any host on this list is blocked regardless of IP resolution result.
+unsubscribe_denied_domains = []
+
+# B.1: Review list for one-click POST target hosts.
+# Hosts on this list produce a deferred/pending_review result (not a hard block)
+# unless they also appear in unsubscribe_allowed_domains (which skips review).
+unsubscribe_review_domains = []
+
+# B.4: Legacy trust-hint allowlist for mailto targets.
+# No longer a gate; a mailto target is authorized when the sender passed
+# DKIM/DMARC AND the target host is not in mailto_denied_domains.
+# Delivery is always via iCloud SMTP (smtp.mail.me.com), never the target host.
+mailto_allowed_domains = []
+
+# B.4: Hard-block list for mailto target hosts.
+# Any host on this list is blocked even if the sender is DKIM/DMARC authenticated.
+mailto_denied_domains = []
+
+# Discord notifications: store the webhook URL in secrets/discord_webhook_url
+# (mode 600), NOT here.  This field has been removed to prevent accidentally
+# committing a secret into the world-readable config.toml.
+
+# ADR-016: Master switch for body-link unsubscribe discovery/probing.
+# find_unsubscribe_links (Phase 1) always works read-only regardless of this
+# switch. probe_unsubscribe_link (Phase 1.5) refuses/simulates a live GET
+# unless this is true. Keep false until Phase 1.5 has been reviewed live.
+allow_body_link_unsubscribe = true
+
+# ADR-016: Max bytes of a probed landing page's visible text returned to
+# the caller in page_text_excerpt.
+probe_excerpt_bytes = 4096
+
+# ADR-016: Max bytes of the raw HTML response body read from a probed
+# landing page. Bounds memory and what classify_landing_page can see.
+probe_max_capture_bytes = 524288
+
+[egress]
+# B.6: Follow HTTP redirects (up to max_redirects hops; each re-checked).
+follow_redirects = true
+# B.3: Maximum redirect hops before deferring with block_class="retryable".
+max_redirects = 3
+# B.4: Try mailto before one-click when the sender is DKIM/DMARC authenticated.
+prefer_mailto = true
+# B.3: HTTP socket timeout in seconds.
+http_timeout_seconds = 30
+# B.4: SMTP socket timeout in seconds.
+smtp_timeout_seconds = 30
+
+[rate_limits]
+# Maximum unsubscribe actions per run (safety cap).
+max_unsubscribes_per_run = 5
+# Seconds to wait between outbound unsubscribe requests.
+request_sleep_seconds = 2.0
+
+[flagged]
+# Maximum attachment size returned by get_attachment (bytes). Default 10 MiB.
+max_attachment_bytes = 10485760
+# Default number of flagged messages to return when limit <= 0.
+default_limit = 25
+# Hard ceiling on the limit parameter for list_flagged_messages.
+max_limit = 100
+# Maximum body text bytes per message returned by list_flagged_messages (256 KiB).
+max_body_bytes = 262144
+
+[read]
+# IMAP folders accessible to list_messages / get_message_body.
+# Confirmed via IMAP LIST on 2025-06: INBOX, Junk, Archive are all real
+# iCloud folder names.
+folders = ["INBOX", "Junk", "Archive"]
+# Maximum snippet bytes returned by list_messages (UTF-8-safe truncation).
+max_snippet_bytes = 8192
+# T2.6 (fork F): default snippet for view="snippet". Hard ceiling is
+# max_snippet_bytes above.
+default_snippet_bytes = 1500
+
+[actions]
+# Real iCloud folder names confirmed via IMAP LIST.
+archive_folder = "Archive"
+# iCloud trash: flagged \Trash in LIST output.
+trash_folder = "Deleted Messages"
+# Per-run caps for batch action tools.
+max_moves_per_run = 50
+max_trashes_per_run = 50
+
+[attachments]
+# T2.5 (fork D): directory where get_attachment saves files when save_to
+# is specified. Must be an absolute path. Created at mode 700 if absent.
+downloads_dir = "/Users/stefanbekker/Claude/icloud-helper-attachments"

@@ -1,0 +1,55 @@
+# ── Secrets (NEVER commit) ─────────────────────────────────────────────
+# Live credentials: icloud_app_password, discord_webhook_url, icloud_email.
+secrets/
+# Live policy/config may carry environment-specific values; commit the
+# templates (policy.example.toml) instead. Uncomment if config.toml holds
+# anything sensitive:
+# config.toml
+# policy.toml
+
+# ── Runtime state & data (machine-local, contains mail data / PII) ─────
+state/
+*.db
+*.db-wal
+*.db-shm
+*.bak-repair-*
+logs/
+*.log
+reports/
+
+# ── Downloaded attachments / rendered PDFs ─────────────────────────────
+# Default downloads_dir is ~/Claude/icloud-helper-attachments (outside the
+# repo), but ignore any local copies just in case.
+downloads/
+*.pdf
+
+# ── Python ─────────────────────────────────────────────────────────────
+.venv/
+.venv-*/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pylint.d/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# ── Tooling / editor / OS ──────────────────────────────────────────────
+.tokensave/
+.remember/
+.removed-duplicate-tests-*/
+.claude/settings.local.json
+.DS_Store
+*.swp
+.idea/
+.vscode/

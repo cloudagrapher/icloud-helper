@@ -1,0 +1,16 @@
+# mail-cleaner per-sender policy
+# Copy to policy.toml and edit.
+#
+# ALLOWLIST-ONLY semantics:
+#   - A sender is acted on ONLY if present here with action = "unsubscribe".
+#   - Absent senders are ignored (no action, but new-sender alerts fire).
+#   - action = "keep" silences new-sender alerts AND prevents any action.
+#
+# Keys are lowercase sender email addresses.
+
+["newsletter@example.com"]
+action = "unsubscribe"
+# disposition = "archive"  # optional: overrides global disposition for this sender
+
+["updates@trusted-site.com"]
+action = "keep"  # silence alerts; never unsubscribe

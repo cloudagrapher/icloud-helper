@@ -1,0 +1,21 @@
+# icloud-helper dependencies (single venv, Python 3.13)
+
+# Testing & linting
+pytest==8.4.2
+pylint==3.3.9
+isort==6.1.0
+
+# Config parsing / writing
+tomli==2.4.1          # read fallback (tomllib is stdlib on 3.11+)
+tomli_w==1.2.0        # policy writes (approve_sender / allow_mcp_policy_writes)
+tomlkit==0.15.0
+
+# PDF text extraction (get_attachment extract_text, fork E)
+pypdf>=6.0.0
+
+# MCP server (FastMCP, stdio transport)
+mcp==1.27.2
+
+# HTML-to-PDF rendering for save_message_pdf (in-process, no JS engine).
+# Requires Pango on macOS: `brew install pango` (or `brew install weasyprint`).
+weasyprint==69.0
