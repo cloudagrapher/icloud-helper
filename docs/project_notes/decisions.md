@@ -186,3 +186,29 @@ ADRs for icloud-helper. Newest considerations appended; keep all entries.
 - ❌ WeasyPrint 69.0 DEPRECATES the dict-based `url_fetcher`/`default_url_fetcher` API in favour of a new `URLFetcher`/`URLFetcherResponse` class. Works today (harmless DeprecationWarnings); a future WeasyPrint bump will require migrating `render_pdf.py` to the class-based API.
 
 **Relationship to prior ADRs:** preserves ADR-003 (no EXPUNGE — read-only session only). Runs in the local `.venv` per ADR-013. Needs no egress master switch (contrast ADR-016's `allow_body_link_unsubscribe`) precisely because it performs no egress — there is nothing to gate at the network layer.
+
+### ADR-018: Remote read-only HTTP entrypoint on Unraid, next to local stdio (2026-11-09)
+
+**Context:**
+- Stefan wants claude.ai (not only the local Mac client) to read his iCloud mail as a custom connector. That needs a public HTTPS endpoint with OAuth, which ADR-013's local stdio server can't provide.
+- ADR-011's Unraid container plan was shelved because no remote consumer existed. One exists now.
+
+**Decision:**
+- Add a SECOND entrypoint, `icloud_helper/remote_server.py`, served over Streamable HTTP. It revives the Unraid host from ADR-011 for this one purpose; ADR-013 stays in force for the local stdio server, which keeps all 21 tools.
+- Tools come from an allowlist: `list_messages`, `get_message_body`, `list_flagged_messages`, `find_unsubscribe_links`, and `get_attachment` through a wrapper with no `save_to` (forced to `""`). No action, policy-write, PDF-write or config tool is registered.
+- Second layer: `readonly_guard`. `main()` calls `enable()` and the Dockerfile sets `ICLOUD_HELPER_READ_ONLY=1`. With it on, `select_folder_readwrite`, `unsubscribe_one_click` and `unsubscribe_mailto` (before SMTP connect) raise `ReadOnlyModeError`.
+- Auth: FastMCP's `GitHubProvider` (an OAuth proxy presenting DCR/CIMD to Claude) with `read:user` scope and consent on. `SingleUserGitHubProvider` rejects any token whose GitHub login (case-insensitive) or, when set, numeric id doesn't match. Redirects: claude.ai's callback only; Claude Code loopback is opt-in.
+- Network: Tailscale sidecar (`tag:mcp`) on Unraid, no published ports; Caddy on the VPS (`tag:edge`) restricts server-to-server paths to Anthropic's egress ranges. Files in `deploy/`.
+
+**Library pin:** `fastmcp==3.4.11` in `requirements-remote.txt`. fastmcp 4.x requires `mcp` 2.x, which removes `mcp.server.fastmcp` and would break the stdio server; 3.4.11 coexists with `mcp==1.27.2`.
+
+**Alternatives rejected:**
+- Tailscale Funnel: no auth or IP allowlist of its own, ts.net hostnames only, beta.
+- Cloudflare Access managed OAuth: beta and unverified against Claude's connector flow.
+- Exposing the stdio server through a bridge: would expose every action tool.
+
+**Consequences:**
+- ✅ claude.ai can read mail with no write or egress path reachable, even by mistake.
+- ✅ Kill switch at five independent layers (connector, Caddy, ACL, JWT key, app password).
+- ❌ A second deployment to keep in step with `mcp_server` changes; `test_remote_server.py` pins the tool surface so additions are deliberate.
+- ❌ Follow-up: egress details (e.g. `find_unsubscribe_links`' `egress_preview`) can include resolved IP strings. Harmless locally; review before relying on the remote server for anything shared.

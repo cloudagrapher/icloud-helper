@@ -2,6 +2,18 @@
 
 Brief log of work completed. No external ticket system — dates + summaries. Newest at top.
 
+### Week of 2026-11-09
+
+**Completed:**
+- 2026-11-09: **Remote read-only HTTP entrypoint (ADR-018), branch
+  `remote-http-oauth`.** Added `remote_server.py` (Streamable HTTP, GitHub OAuth
+  locked to one account, 5 read tools), `readonly_guard.py` wired into the
+  read-write SELECT, one-click and mailto paths, 29 tests in
+  `test_remote_server.py`, `requirements-remote.txt` (fastmcp 3.4.11),
+  Dockerfile, and `deploy/` (Unraid compose with Tailscale sidecar, VPS
+  Caddyfile, README with kill switch). Not yet built or deployed: Docker build,
+  live OAuth and `caddy validate` still to run. Status: ready for review.
+
 ### Week of 2026-07-06
 
 **Completed:**

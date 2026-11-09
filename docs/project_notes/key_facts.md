@@ -6,7 +6,7 @@ Non-sensitive project configuration and constants. **No secret values here** —
 
 - **Primary deployment (since 2026-06-30, ADR-013):** runs LOCALLY on the Mac as a stdio MCP server from `~/Projects/icloud-helper`. Claude Desktop spawns it directly: `command` = `~/Projects/icloud-helper/.venv/bin/python`, `args` = `-m icloud_helper.mcp_server`, `cwd` = the repo. Single Python 3.13 venv at `.venv`. No SSH/Tailscale/HTTP. THIS repo is now the runtime, not just a working copy. ⚠️ Desktop ignores the config `cwd`, so the venv has an `icloud_helper.pth` (→ repo root) in site-packages to make the package importable from any launch dir; a venv rebuild must re-add it (or add a pyproject + `pip install -e .`). Still NOT git-tracked — consider `git init` (gitignore `secrets/`, `state/`, `.venv*`, `__pycache__`).
 - **howl-m2 (old host, retired as primary):** SSH `ollama@howl-m2.kamori-tuna.ts.net`, `~/icloud-helper`. Kept as rollback/history; openclaw registration there is obsolete (openclaw dropped as a consumer).
-- **Unraid "tower" (SHELVED, ADR-011):** `root@100.67.51.65` / `tower.kamori-tuna.ts.net`, Unraid 7.3.0. The container/HTTP/Tailscale plan is parked — revisit only if an always-on / remote consumer returns.
+- **Unraid "tower" (SHELVED, ADR-011):** `root@100.67.51.65` / `tower.kamori-tuna.ts.net`, Unraid 7.3.0. The general container plan stays parked; a remote READ-ONLY entrypoint for claude.ai is planned there (ADR-018).
 
 ## iCloud account / mail servers
 
@@ -36,6 +36,13 @@ Non-sensitive project configuration and constants. **No secret values here** —
 - **Actions (gated):** `unsubscribe_sender`, `run_cleanup`, `trigger_triage`, `approve_sender`, `move_messages`, `trash_messages`, `unsubscribe_message`, `probe_unsubscribe_link`, `unsubscribe_with_fallback`.
 - `save_message_pdf` (added 2026-07-08, ADR-017): renders a flagged message's original text/html to PDF in-process via WeasyPrint (no JS engine, fail-closed egress fetcher — cid:+data: only). Gated like `get_attachment` (no arm flag, no confirmed-action gate) because it performs zero egress and only a local write. Reuses `attachments.downloads_dir` + `flagged.max_attachment_bytes` — NO new config key. Requires WeasyPrint in `.venv` (`weasyprint==69.0`) plus Pango via `brew install weasyprint`. ⚠️ WeasyPrint 69.0 deprecates the dict `url_fetcher` API (class-based `URLFetcher` on a future bump).
 - Transport: stdio, local (ADR-013).
+
+## Remote MCP server (ADR-018, branch `remote-http-oauth`)
+
+- Entrypoint: `python -m icloud_helper.remote_server` (Streamable HTTP, default `0.0.0.0:8765/mcp`). Deps: `requirements-remote.txt` (`fastmcp==3.4.11`, do NOT bump to 4.x while stdio uses `mcp` 1.x).
+- 5 tools: `list_messages`, `get_message_body`, `list_flagged_messages`, `find_unsubscribe_links`, `get_attachment` (no `save_to`). Read-only guard on (`ICLOUD_HELPER_READ_ONLY=1`).
+- Env: `ICLOUD_HELPER_PUBLIC_URL`, `_GITHUB_CLIENT_ID`, `_GITHUB_CLIENT_SECRET_FILE`, `_ALLOWED_GITHUB_LOGIN`, `_ALLOWED_GITHUB_ID`, `_JWT_KEY_FILE`, `_ALLOW_CLAUDE_CODE`, `_HOST`/`_PORT`/`_PATH`; `FASTMCP_HOME` for OAuth state. Secrets by file only.
+- Deploy files: `deploy/unraid/compose.yaml`, `deploy/vps/Caddyfile`, `deploy/README.md` (setup + kill switch).
 
 ## Automation
 
