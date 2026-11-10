@@ -1,0 +1,8 @@
+# Remote (Streamable HTTP + GitHub OAuth) entrypoint: icloud_helper.remote_server
+# Install on top of the base requirements:  pip install -r requirements-remote.txt
+#
+# fastmcp is pinned to the 3.x line on purpose: fastmcp 4.x pulls in mcp 2.x,
+# which removes mcp.server.fastmcp and breaks the stdio server (mcp_server.py).
+# 3.4.11 coexists with mcp==1.27.2 (pip check clean, 2026-11-09).
+-r requirements.txt
+fastmcp==3.4.11

@@ -1,0 +1,83 @@
+# icloud-helper remote (read-only) on Unraid, reachable only over Tailscale.
+#
+# Two containers share one network namespace:
+#   tailscale     joins the tailnet as "icloud-helper" with tag:mcp
+#   icloud-helper serves HTTP on :8765 inside that namespace; no host ports
+#
+# Every value in angle brackets is a placeholder.  Secrets live in files under
+# ${APPDATA}/secrets*; nothing secret goes in this file or in environment
+# variables.  See deploy/README.md for the full setup.
+
+name: icloud-helper
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  tailscale:
+    <<: *hardening
+    image: tailscale/tailscale:stable
+    hostname: icloud-helper
+    environment:
+      TS_HOSTNAME: icloud-helper
+      TS_STATE_DIR: /var/lib/tailscale
+      # Auth key is read from a file (tagged, pre-approved, non-reusable).
+      TS_AUTHKEY: file:/run/secrets/ts_authkey
+      TS_EXTRA_ARGS: --advertise-tags=tag:mcp
+      TS_USERSPACE: "false"
+    volumes:
+      - ${APPDATA:-/mnt/user/appdata/icloud-helper}/tailscale:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    secrets:
+      - ts_authkey
+
+  icloud-helper:
+    <<: *hardening
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: icloud-helper-remote:local
+    network_mode: service:tailscale
+    depends_on:
+      - tailscale
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    environment:
+      ICLOUD_HELPER_PUBLIC_URL: https://<mcp.your-domain.example>
+      ICLOUD_HELPER_GITHUB_CLIENT_ID: <github-oauth-app-client-id>
+      ICLOUD_HELPER_GITHUB_CLIENT_SECRET_FILE: /run/secrets/github_client_secret
+      ICLOUD_HELPER_ALLOWED_GITHUB_LOGIN: <your-github-login>
+      ICLOUD_HELPER_ALLOWED_GITHUB_ID: "<your-numeric-github-user-id>"
+      ICLOUD_HELPER_JWT_KEY_FILE: /run/secrets/jwt_signing_key
+      ICLOUD_HELPER_READ_ONLY: "1"
+      ICLOUD_HELPER_HOST: 0.0.0.0
+      ICLOUD_HELPER_PORT: "8765"
+      ICLOUD_HELPER_PATH: /mcp
+      FASTMCP_HOME: /data/fastmcp
+    volumes:
+      # Use a remote-only config with confirmed actions DISARMED.
+      - ${APPDATA:-/mnt/user/appdata/icloud-helper}/config.toml:/app/config.toml:ro
+      - ${APPDATA:-/mnt/user/appdata/icloud-helper}/policy.toml:/app/policy.toml:ro
+      # icloud_email + icloud_app_password (mode 600, owned by uid 10001).
+      - ${APPDATA:-/mnt/user/appdata/icloud-helper}/secrets:/app/secrets:ro
+      - ${APPDATA:-/mnt/user/appdata/icloud-helper}/state:/app/state
+      - ${APPDATA:-/mnt/user/appdata/icloud-helper}/fastmcp:/data/fastmcp
+    secrets:
+      - github_client_secret
+      - jwt_signing_key
+
+secrets:
+  ts_authkey:
+    file: ${APPDATA:-/mnt/user/appdata/icloud-helper}/secrets-runtime/ts_authkey
+  github_client_secret:
+    file: ${APPDATA:-/mnt/user/appdata/icloud-helper}/secrets-runtime/github_client_secret
+  jwt_signing_key:
+    file: ${APPDATA:-/mnt/user/appdata/icloud-helper}/secrets-runtime/jwt_signing_key

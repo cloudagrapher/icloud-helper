@@ -15,6 +15,8 @@ import ssl
 import sys
 from typing import Dict, List
 
+from icloud_helper.readonly_guard import assert_writes_allowed
+
 log = logging.getLogger(__name__)
 
 # Maximum seconds to wait for any single IMAP socket operation.  imaplib
@@ -266,6 +268,7 @@ def select_folder_readwrite(imap: imaplib.IMAP4_SSL, folder: str) -> int:
             select_folder_readonly behaviour so callers need not handle
             the imap logout separately).
     """
+    assert_writes_allowed("IMAP read-write SELECT")
     status, data = imap.select(folder, readonly=False)
     if status != "OK":
         log.error("Failed to select folder %r (rw): %s", folder, data)

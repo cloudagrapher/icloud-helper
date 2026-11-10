@@ -26,6 +26,7 @@ from icloud_helper.headers import (
     extract_urls_from_list_unsubscribe,
 )
 from icloud_helper.policy import GlobalConfig
+from icloud_helper.readonly_guard import assert_writes_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -766,6 +767,7 @@ def unsubscribe_one_click(  # pylint: disable=too-many-return-statements,too-man
     Returns:
         UnsubscribeResult describing the outcome.
     """
+    assert_writes_allowed("one-click unsubscribe egress")
     # Build a minimal config stand-in when none is provided (backward compat).
     if config is None:
         config = _FallbackConfig(
@@ -1257,6 +1259,7 @@ def unsubscribe_mailto(  # pylint: disable=too-many-arguments,too-many-positiona
     msg["Subject"] = subject
     msg.set_content("Unsubscribe")
 
+    assert_writes_allowed("mailto unsubscribe SMTP send")
     smtp: Optional[smtplib.SMTP] = None
     try:
         smtp = smtplib.SMTP(smtp_host, smtp_port, timeout=smtp_timeout)

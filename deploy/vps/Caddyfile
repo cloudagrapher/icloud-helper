@@ -1,0 +1,52 @@
+# Public edge for icloud-helper on the VPS (tag:edge on the tailnet).
+#
+# Claude's servers reach /mcp, /token, /register and the OAuth metadata from
+# Anthropic's published egress ranges only.  The browser-facing sign-in pages
+# (/authorize, /auth/callback, /consent) stay open because your own browser
+# loads them while you sign in with GitHub.  Everything else is 404.
+#
+# Placeholders: <mcp.your-domain.example>, <your-tailnet>.
+# If you enable Claude Code (ICLOUD_HELPER_ALLOW_CLAUDE_CODE=1), add your own
+# public IP to the @not_claude range list, since Claude Code calls /mcp from your machine.
+
+<mcp.your-domain.example> {
+	encode zstd gzip
+
+	log {
+		output file /var/log/caddy/icloud-helper.access.log {
+			roll_size 10MiB
+			roll_keep 10
+		}
+		format json
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	@server_paths path /mcp /mcp/* /token /register /.well-known/*
+	@browser_paths path /authorize /auth/callback /consent
+
+	handle @server_paths {
+		# Anthropic egress ranges (platform.claude.com/docs/en/api/ip-addresses).
+		@not_claude not remote_ip 160.79.104.0/21 153.61.208.0/20
+		respond @not_claude 403
+		reverse_proxy icloud-helper.<your-tailnet>.ts.net:8765 {
+			flush_interval -1
+			transport http {
+				read_timeout 310s
+			}
+		}
+	}
+
+	handle @browser_paths {
+		reverse_proxy icloud-helper.<your-tailnet>.ts.net:8765
+	}
+
+	handle {
+		respond 404
+	}
+}
